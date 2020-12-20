@@ -10,9 +10,18 @@ import java.util.UUID;
 
 public class Link {
 
-    private static final String SERVICE_NAME = "Android Car Remote";
-    public static final UUID SERVICE_UUID =
-            UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    public static class Service {
+        public final String name;
+        public final UUID uuid;
+
+        public Service(String name, String uuid) {
+            this.name = name;
+            this.uuid = UUID.fromString(uuid);
+        }
+    }
+    public static Service ANDROID_CAR_SERVICE_EVENT = new Service("Android Car Remote Event", "00001101-0000-100A-8000-00805F9B34FB");
+    public static Service ANDROID_CAR_SERVICE_ICON = new Service("Android Car Remote Icon", "00001101-0000-100B-8000-00805F9B34FB");
+
 
     public interface ILinkStateListener {
         void connecting();
@@ -29,7 +38,7 @@ public class Link {
         this.listener = listener;
     }
 
-    public void listen() throws IOException {
+    public void listen(Service service) throws IOException {
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         BluetoothServerSocket serverSocket = null;
         socket = null;
@@ -39,7 +48,7 @@ public class Link {
         try {
 
             // listen for incoming connections
-            serverSocket = adapter.listenUsingRfcommWithServiceRecord(SERVICE_NAME, SERVICE_UUID);
+            serverSocket = adapter.listenUsingRfcommWithServiceRecord(service.name, service.uuid);
 
             // accept connection
             socket = serverSocket.accept();
@@ -58,7 +67,7 @@ public class Link {
         listener.disconnected();
     }
 
-    public void connect(BluetoothDevice device) {
+    public void connect(BluetoothDevice device, Service service) {
         if (device == null) {
             return;
         }
@@ -69,7 +78,7 @@ public class Link {
 
         try {
             // connect to device
-            socket = device.createRfcommSocketToServiceRecord(SERVICE_UUID);
+            socket = device.createRfcommSocketToServiceRecord(service.uuid);
             socket.connect();
 
             listener.connected();
