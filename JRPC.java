@@ -99,11 +99,14 @@ public class JRPC {
 
     private final AtomicReference<Context> ctx = new AtomicReference<>();
 
-    public synchronized void process(final InputStream in, final OutputStream out) throws Exception {
+    public synchronized void process(final InputStream in, final OutputStream out, Link.ILinkStateListener listener) throws Exception {
         // set new context
         try {
             Context ctx = new Context(new InputStreamReader(in, "UTF-8"), out);
             this.ctx.set(ctx);
+            // context set we are read to send requests, state connected
+            listener.connected();
+
             // the parser will throw an exception on close
             ctx.run();
         } finally {

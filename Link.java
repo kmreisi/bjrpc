@@ -50,13 +50,11 @@ public class Link {
             // listen for incoming connections
             serverSocket = adapter.listenUsingRfcommWithServiceRecord(service.name, service.uuid);
 
-            // accept connection
+            // accept incomming connection
             socket = serverSocket.accept();
 
-            listener.connected();
-
-            // run JRPC on it
-            jrpc.process(socket.getInputStream(), socket.getOutputStream());
+            // run JRPC on it, will send connected when ready
+            jrpc.process(socket.getInputStream(), socket.getOutputStream(), listener);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -82,10 +80,8 @@ public class Link {
             socket = device.createRfcommSocketToServiceRecord(service.uuid);
             socket.connect();
 
-            listener.connected();
-
-            // run JRPC on it
-            jrpc.process(socket.getInputStream(), socket.getOutputStream());
+            // run JRPC on it, will send connected when ready
+            jrpc.process(socket.getInputStream(), socket.getOutputStream(), listener);
 
         } catch (Exception e) {
         }
