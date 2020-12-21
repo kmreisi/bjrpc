@@ -19,8 +19,8 @@ public class Link {
             this.uuid = UUID.fromString(uuid);
         }
     }
-    public static Service ANDROID_CAR_SERVICE_EVENT = new Service("Android Car Remote Event", "00001101-0000-100A-8000-00805F9B34FB");
-    public static Service ANDROID_CAR_SERVICE_ICON = new Service("Android Car Remote Icon", "00001101-0000-100B-8000-00805F9B34FB");
+    public static Service ANDROID_CAR_SERVICE_EVENT = new Service("Android Car Remote Event", "0000110f-0000-1000-8000-00805f9b12fb");
+    public static Service ANDROID_CAR_SERVICE_ICON = new Service("Android Car Remote Icon", "0000111d-0000-1000-8000-00805f9b12fb");
 
 
     public interface ILinkStateListener {
@@ -59,6 +59,7 @@ public class Link {
             jrpc.process(socket.getInputStream(), socket.getOutputStream());
 
         } catch (Exception e) {
+            e.printStackTrace();
         }
 
         Utils.closeSilently(serverSocket);

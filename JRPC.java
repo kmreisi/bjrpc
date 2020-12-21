@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -56,22 +57,23 @@ public class JRPC {
         }
     }
 
-    public interface CallbackResponse {
-        void call(Object params);
-    }
+    public static class Request {
 
-    public interface CallbackError {
-        void call(Error error);
-    }
+        public interface CallbackResponse {
+            void call(Object params);
+        }
 
-    public class Request {
+        public interface CallbackError {
+            void call(Error error);
+        }
+
         private final String method;
         private final Object params;
         private final CallbackResponse response;
         private final CallbackError error;
         private Object id = null;
 
-        private Request(String method, Object params, CallbackResponse response, CallbackError error) {
+        public Request(String method, Object params, CallbackResponse response, CallbackError error) {
             this.method = method;
             this.params = params;
             this.response = response;
@@ -79,7 +81,7 @@ public class JRPC {
         }
     }
 
-    public class Notification extends Request {
+    public static class  Notification extends Request {
         public Notification(String method, Object params) {
             super( method, params, null, null);
         }
@@ -119,7 +121,7 @@ public class JRPC {
         private final Map<Object, Request> requests = new HashMap<>();
         private final InputStreamReader in;
         private final OutputStream out;
-        private final BlockingQueue<byte[]> txQueue = new LinkedTransferQueue<>();
+        private final BlockingQueue<byte[]> txQueue = new LinkedBlockingQueue<>();
 
         private Object getNextId() {
             synchronized (currentId) {
@@ -141,14 +143,16 @@ public class JRPC {
             final AtomicBoolean running = new AtomicBoolean(true);
             final AtomicReference<Exception> error = new AtomicReference<>(null);
 
-            final Thread tx = new Thread(new Runnable() {
+            Thread tx = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         byte[] toSend;
                         while (running.get() && (toSend = txQueue.take()) != null) {
-                            out.write(toSend);
-                            out.flush();
+                            if (toSend.length > 0) {
+                                out.write(toSend);
+                                out.flush();
+                            }
                         }
                     } catch (Exception e) {
                         if (running.get()) {
@@ -176,8 +180,8 @@ public class JRPC {
                             error.compareAndSet(null, e);
                         }
                     } finally {
-                        tx.notifyAll();
                         running.set(false);
+                        txQueue.add(new byte[0]);
                         Utils.closeSilently(in);
                         Utils.closeSilently(out);
                     }
@@ -187,8 +191,9 @@ public class JRPC {
             tx.start();
             rx.start();
 
-            rx.join();
             tx.join();
+            rx.interrupt();
+            rx.join();
 
             if (error.get() != null) {
                 throw error.get();
@@ -228,7 +233,7 @@ public class JRPC {
                     throw new Error(id, -32603, "Received result to unknown request.");
                 }
 
-                CallbackResponse response = request.response;
+                Request.CallbackResponse response = request.response;
                 if (response != null) {
                     response.call(result);
                 }
@@ -251,6 +256,12 @@ public class JRPC {
         }
 
         public void send(Request request) {
+            synchronized (requests) {
+                if (!(request instanceof Notification)) {
+                    request.id = getNextId();
+                }
+            }
+
             // create package
             Map<String, Object> data = new HashMap<>();
             data.put("jsonrpc", "2.0");
@@ -259,9 +270,6 @@ public class JRPC {
             data.put("params", request.params);
 
             synchronized (requests) {
-                if (!(request instanceof Notification)) {
-                    request.id = getNextId();
-                }
                 if (request.id != null) {
                     requests.put(request.id, request);
                 }
