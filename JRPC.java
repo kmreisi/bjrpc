@@ -57,7 +57,7 @@ public class JRPC {
             data.put("id", id);
             data.put("result", param);
 
-            ctx.transmit( JsonUtils.mapToJson(data).toString());
+            ctx.transmit(JsonUtils.mapToJson(data).toString());
         }
     }
 
@@ -85,9 +85,9 @@ public class JRPC {
         }
     }
 
-    public static class  Notification extends Request {
+    public static class Notification extends Request {
         public Notification(String method, Object params) {
-            super( method, params, null, null);
+            super(method, params, null, null);
         }
     }
 
@@ -140,12 +140,12 @@ public class JRPC {
             }
         }
 
-        Context(InputStreamReader in, OutputStream out)  throws IOException, Error  {
+        Context(InputStreamReader in, OutputStream out) throws IOException, Error {
             this.in = in;
             this.out = out;
         }
 
-        private void run() throws Exception  {
+        private void run() throws Exception {
 
             final AtomicBoolean running = new AtomicBoolean(true);
             final AtomicReference<Exception> error = new AtomicReference<>(null);
@@ -211,7 +211,7 @@ public class JRPC {
             Map<String, Object> data;
             try {
                 // try to parse the full object
-                data = (Map<String, Object>)Parser.parse(in);
+                data = (Map<String, Object>) Parser.parse(in);
             } catch (Exception e) {
                 System.err.println("ERROR: " + e.getMessage());
                 e.printStackTrace();

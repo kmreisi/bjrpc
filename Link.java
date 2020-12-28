@@ -19,13 +19,16 @@ public class Link {
             this.uuid = UUID.fromString(uuid);
         }
     }
+
     public static Service ANDROID_CAR_SERVICE_EVENT = new Service("Android Car Remote Event", "0000110f-0000-1000-8000-00805f9b12fb");
     public static Service ANDROID_CAR_SERVICE_ICON = new Service("Android Car Remote Icon", "0000111d-0000-1000-8000-00805f9b12fb");
 
 
     public interface ILinkStateListener {
         void connecting();
+
         void connected();
+
         void disconnected();
     }
 
