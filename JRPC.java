@@ -47,6 +47,10 @@ public class JRPC {
         }
 
         public void send(Object param) {
+
+            if (param == null) {
+                param = new HashMap<String, Object>();
+            }
             // create package
             Map<String, Object> data = new HashMap<>();
             data.put("jsonrpc", "2.0");
