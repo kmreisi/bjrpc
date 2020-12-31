@@ -49,6 +49,10 @@ public class Server {
         }
     }
 
+    public void disconnect() {
+        link.disconnect();
+    }
+
     public JRPC getJrpc() {
         return link.getJrpc();
     }

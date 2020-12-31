@@ -9,13 +9,31 @@ public class Client {
 
     private Thread thread;
     private boolean running = false;
+    private boolean connected = false;
 
     public interface IGetBluetoothDevice {
         public BluetoothDevice getDevice();
     }
 
-    public Client(Link.Service service, Link.ILinkStateListener listener, IGetBluetoothDevice device) {
-        link = new Link(listener);
+    public Client(Link.Service service, final Link.ILinkStateListener listener, IGetBluetoothDevice device) {
+        link = new Link(new Link.ILinkStateListener() {
+            @Override
+            public void connecting() {
+                listener.connecting();
+            }
+
+            @Override
+            public void connected() {
+                connected = true;
+                listener.connected();
+            }
+
+            @Override
+            public void disconnected() {
+                connected = false;
+                listener.disconnected();
+            }
+        });
         this.service = service;
         this.device = device;
     }
@@ -55,6 +73,10 @@ public class Client {
             link.disconnect();
             thread.notifyAll();
         }
+    }
+
+    public boolean isConnected() {
+        return connected;
     }
 
     public void disconnect() {
