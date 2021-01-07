@@ -75,6 +75,8 @@ public class Link {
                             e.printStackTrace();
                         }
                     }
+
+                    System.out.println("Bye Bye");
                 }
             });
 

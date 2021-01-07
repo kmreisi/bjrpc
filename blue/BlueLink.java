@@ -43,6 +43,7 @@ public class BlueLink extends Link {
 
                 // accept incoming connection
                 BluetoothSocket socket = serverSocket.accept();
+                serverSocket.close();
 
                 Link.Connection connection = new Link.Connection();
                 connection.in = socket.getInputStream();
