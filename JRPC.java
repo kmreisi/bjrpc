@@ -291,7 +291,21 @@ public class JRPC {
                 e.printStackTrace();
             }
         }
+
+        public int getTxQueuSize() {
+            return txQueue.size();
+        }
     }
+
+    public int getTxQueuSize() {
+        Context ctx = this.ctx.get();
+        if (ctx != null) {
+            return ctx.getTxQueuSize();
+        }
+
+        return -1;
+    }
+
 
     public void send(Request request) {
         Context ctx = this.ctx.get();

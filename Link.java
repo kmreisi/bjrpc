@@ -5,7 +5,10 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
 public class Link {
@@ -24,6 +27,13 @@ public class Link {
     public static Service ANDROID_CAR_SERVICE_ICON = new Service("Android Car Remote Icon", "0000111d-0000-1000-8000-00805f9b12fb");
 
 
+
+    public static class Connection {
+        public InputStream in;
+        public OutputStream out;
+        public Closeable closeable;
+    }
+
     public interface ILinkStateListener {
         void connecting();
 
@@ -32,74 +42,82 @@ public class Link {
         void disconnected();
     }
 
+    public interface IConnector {
+        Connection connect() throws IOException;
+    }
+
     private final JRPC jrpc;
     private final ILinkStateListener listener;
-    private BluetoothSocket socket;
+
+    private Connection connection = null;
+    private Thread thread = null;
+    private boolean running = false;
 
     public Link(ILinkStateListener listener) {
         this.jrpc = new JRPC();
         this.listener = listener;
     }
 
-    public void listen(Service service) throws IOException {
-        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        BluetoothServerSocket serverSocket = null;
-        socket = null;
+    public void start(final IConnector connector) {
+        synchronized (this) {
+            if (running) {
+                return;
+            }
+            running = true;
+            thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (running) {
+                        try {
+                            listener.connecting();
+                            connection = connector.connect();
+                            jrpc.process(connection.in, connection.out, listener);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            if (connection != null) {
+                                Utils.closeSilently(connection.closeable);
+                                Utils.closeSilently(connection.in);
+                                Utils.closeSilently(connection.out);
+                            }
+                            connection = null;
+                            listener.disconnected();
+                        }
 
-        listener.connecting();
+                        try {
+                            Thread.sleep(100);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
 
-        try {
-
-            // listen for incoming connections
-            serverSocket = adapter.listenUsingRfcommWithServiceRecord(service.name, service.uuid);
-
-            // accept incomming connection
-            socket = serverSocket.accept();
-
-            // run JRPC on it, will send connected when ready
-            jrpc.process(socket.getInputStream(), socket.getOutputStream(), listener);
-
-        } catch (Exception e) {
-            e.printStackTrace();
+            thread.start();
         }
-
-        Utils.closeSilently(serverSocket);
-        Utils.closeSilently(socket);
-
-        listener.disconnected();
     }
-
-    public void connect(BluetoothDevice device, Service service) {
-        if (device == null) {
-            return;
-        }
-
-        socket = null;
-
-        listener.connecting();
-
-        try {
-            // connect to device
-            socket = device.createRfcommSocketToServiceRecord(service.uuid);
-            socket.connect();
-
-            // run JRPC on it, will send connected when ready
-            jrpc.process(socket.getInputStream(), socket.getOutputStream(), listener);
-
-        } catch (Exception e) {
-        }
-
-        Utils.closeSilently(socket);
-
-        listener.disconnected();
-    }
-
 
     public JRPC getJrpc() {
         return jrpc;
     }
 
     public void disconnect() {
-        Utils.closeSilently(socket);
+        if (connection != null) {
+            Utils.closeSilently(connection.closeable);
+            Utils.closeSilently(connection.in);
+            Utils.closeSilently(connection.out);
+        }
+    }
+
+    public void stop() {
+        synchronized (this) {
+            running = false;
+            disconnect();
+            thread.notifyAll();
+        }
+    }
+
+    public boolean isConnected() {
+        return connection != null;
     }
 }
